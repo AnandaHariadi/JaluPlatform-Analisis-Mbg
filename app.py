@@ -40,7 +40,9 @@ def get_nutrition_data():
 def load_yolo_model():
     with st.spinner("🔄 Memuat model AI..."):
         try:
-            model = YOLO("yolov8n.pt")  # Menggunakan nano agar lebih ringan
+            # Gunakan "yolov8n" agar ultralytics dapat men-download model otomatis (jika environment mengizinkan).
+            # Jika tidak ada internet, tempatkan file yolov8n.pt di repo/server dan gunakan path file tersebut.
+            model = YOLO("yolov8n")
             st.success("✅ Model AI berhasil dimuat!")
             return model
         except Exception as e:
@@ -150,7 +152,7 @@ def draw_detections(image, results):
         coords = box.xyxy[0].tolist()
         conf = float(box.conf[0])
         cls_id = int(box.cls[0])
-        label = yolo_model.names[cls_id]
+        label = yolo_model.names[cls_id] if yolo_model is not None else "object"
         
         draw.rectangle(coords, outline="red", width=3)
         draw.text((coords[0], coords[1]-10), f"{label} {conf:.2f}", fill="red")
@@ -312,7 +314,7 @@ elif page == "Dashboard Analisis":
                     template="plotly_white"
                 )
                 fig1.update_layout(showlegend=True, height=400)
-                st.plotly_chart(fig1, width='stretch')
+                st.plotly_chart(fig1, use_container_width=True)
 
         with c2:
             st.markdown("""
@@ -331,7 +333,7 @@ elif page == "Dashboard Analisis":
                     template="plotly_white"
                 )
                 fig2.update_layout(height=400)
-                st.plotly_chart(fig2, width='stretch')
+                st.plotly_chart(fig2, use_container_width=True)
 
     if selected_charts == "Semua Chart" or selected_charts == "Chart Detail":
         # Row 2: Pie Chart and Box Plot
@@ -354,7 +356,7 @@ elif page == "Dashboard Analisis":
                     color_discrete_sequence=px.colors.qualitative.Set3
                 )
                 fig3.update_layout(height=400)
-                st.plotly_chart(fig3, width='stretch')
+                st.plotly_chart(fig3, use_container_width=True)
 
         with c4:
             st.markdown("""
@@ -372,7 +374,7 @@ elif page == "Dashboard Analisis":
                     template="plotly_white"
                 )
                 fig4.update_layout(height=400, showlegend=False)
-                st.plotly_chart(fig4, width='stretch')
+                st.plotly_chart(fig4, use_container_width=True)
 
         # Row 3: Line Chart and Heatmap
         c5, c6 = st.columns(2)
@@ -414,7 +416,7 @@ elif page == "Dashboard Analisis":
                     color_continuous_scale="RdBu_r"
                 )
                 fig6.update_layout(height=400)
-                st.plotly_chart(fig6, width='stretch')
+                st.plotly_chart(fig6, use_container_width=True)
 
     # Data Table with pagination for better performance
     st.markdown("### 📋 Detail Data", unsafe_allow_html=True)
@@ -436,8 +438,8 @@ elif page == "Dashboard Analisis":
     total_pages = (total_rows // rows_per_page) + (1 if total_rows % rows_per_page > 0 else 0)
 
     if total_pages > 1:
-        page = st.slider("Halaman:", 1, total_pages, 1)
-        start_idx = (page - 1) * rows_per_page
+        page_num = st.slider("Halaman:", 1, total_pages, 1)
+        start_idx = (page_num - 1) * rows_per_page
         end_idx = start_idx + rows_per_page
         display_data = filtered.iloc[start_idx:end_idx]
         st.caption(f"Menampilkan {start_idx + 1}-{min(end_idx, total_rows)} dari {total_rows} baris")
@@ -446,7 +448,7 @@ elif page == "Dashboard Analisis":
 
     st.dataframe(
         display_data.style.highlight_max(axis=0),
-        width='stretch',
+        use_container_width=True,
         height=min(400, len(display_data) * 35 + 50)  # Dynamic height based on rows
     )
 
@@ -481,62 +483,66 @@ elif page == "Deteksi AI Vision":
         # Processing Section
         st.markdown("### 🔍 Proses Analisis", unsafe_allow_html=True)
 
-        with st.spinner("🤖 AI sedang menganalisis gambar..."):
-            results = yolo_model(image)
-            processed_img, labels = draw_detections(image.copy(), results)
-            nutrisi = calculate_nutrients(labels)
+        # Pastikan model tersedia
+        if yolo_model is None:
+            st.error("Model AI tidak tersedia. Pastikan file model ada atau environment dapat mengunduh model YOLO (internet).")
+        else:
+            with st.spinner("🤖 AI sedang menganalisis gambar..."):
+                results = yolo_model(image)
+                processed_img, labels = draw_detections(image.copy(), results)
+                nutrisi = calculate_nutrients(labels)
 
-        # Results Section
-        st.markdown("### 📊 Hasil Analisis", unsafe_allow_html=True)
+            # Results Section
+            st.markdown("### 📊 Hasil Analisis", unsafe_allow_html=True)
 
-        col_img, col_res = st.columns([2, 1])
+            col_img, col_res = st.columns([2, 1])
 
-        with col_img:
-            st.markdown("""
-            <div class="bg-white p-4 rounded-xl shadow-lg">
-                <h4 class="text-lg font-semibold text-gray-800 mb-2">🖼️ Gambar Hasil Deteksi</h4>
-            </div>
-            """, unsafe_allow_html=True)
-            st.image(processed_img, caption="Hasil Deteksi AI")
-
-        with col_res:
-            # Detection Summary
-            if len(labels) > 0:
-                st.success(f"✅ Ditemukan {len(labels)} objek makanan")
-            else:
-                st.warning("⚠️ Tidak ada objek makanan terdeteksi")
-
-            # Nutrition Results
-            st.markdown("""
-            <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
-                <h4 class="text-lg font-semibold text-gray-800 mb-3">🥗 Estimasi Nutrisi</h4>
-            </div>
-            """, unsafe_allow_html=True)
-
-            # Nutrition Metrics in a grid
-            nutr_cols = st.columns(2)
-            with nutr_cols[0]:
-                st.metric("🔥 Kalori", f"{nutrisi['Calories']:.0f} kcal")
-                st.metric("🍗 Protein", f"{nutrisi['Protein']:.1f} g")
-            with nutr_cols[1]:
-                st.metric("🍞 Karbohidrat", f"{nutrisi['Carbs']:.1f} g")
-                st.metric("🥑 Lemak", f"{nutrisi['Fat']:.1f} g")
-
-            # Detected Items
-            if nutrisi["Items"]:
+            with col_img:
                 st.markdown("""
-                <div class="bg-green-50 p-4 rounded-xl border-l-4 border-green-500 mt-4">
-                    <h5 class="font-semibold text-green-800 mb-2">✅ Item Terdeteksi:</h5>
-                    <p class="text-green-700">{}</p>
-                </div>
-                """.format(", ".join(set(nutrisi["Items"]))), unsafe_allow_html=True)
-            else:
-                st.markdown("""
-                <div class="bg-blue-50 p-4 rounded-xl border-l-4 border-blue-500 mt-4">
-                    <h5 class="font-semibold text-blue-800 mb-2">💡 Tips:</h5>
-                    <p class="text-blue-700">Gunakan objek seperti: Banana, Apple, Sandwich, Pizza untuk tes nutrisi.</p>
+                <div class="bg-white p-4 rounded-xl shadow-lg">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-2">🖼️ Gambar Hasil Deteksi</h4>
                 </div>
                 """, unsafe_allow_html=True)
+                st.image(processed_img, caption="Hasil Deteksi AI")
+
+            with col_res:
+                # Detection Summary
+                if len(labels) > 0:
+                    st.success(f"✅ Ditemukan {len(labels)} objek makanan")
+                else:
+                    st.warning("⚠️ Tidak ada objek makanan terdeteksi")
+
+                # Nutrition Results
+                st.markdown("""
+                <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-3">🥗 Estimasi Nutrisi</h4>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Nutrition Metrics in a grid
+                nutr_cols = st.columns(2)
+                with nutr_cols[0]:
+                    st.metric("🔥 Kalori", f"{nutrisi['Calories']:.0f} kcal")
+                    st.metric("🍗 Protein", f"{nutrisi['Protein']:.1f} g")
+                with nutr_cols[1]:
+                    st.metric("🍞 Karbohidrat", f"{nutrisi['Carbs']:.1f} g")
+                    st.metric("🥑 Lemak", f"{nutrisi['Fat']:.1f} g")
+
+                # Detected Items
+                if nutrisi["Items"]:
+                    st.markdown("""
+                    <div class="bg-green-50 p-4 rounded-xl border-l-4 border-green-500 mt-4">
+                        <h5 class="font-semibold text-green-800 mb-2">✅ Item Terdeteksi:</h5>
+                        <p class="text-green-700">{}</p>
+                    </div>
+                    """.format(", ".join(set(nutrisi["Items"]))), unsafe_allow_html=True)
+                else:
+                    st.markdown("""
+                    <div class="bg-blue-50 p-4 rounded-xl border-l-4 border-blue-500 mt-4">
+                        <h5 class="font-semibold text-blue-800 mb-2">💡 Tips:</h5>
+                        <p class="text-blue-700">Gunakan objek seperti: Banana, Apple, Sandwich, Pizza untuk tes nutrisi.</p>
+                    </div>
+                    """, unsafe_allow_html=True)
     else:
         # Placeholder when no image uploaded
         st.markdown("""
