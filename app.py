@@ -173,7 +173,7 @@ if page == "Beranda Website":
     # Hero Section with Tailwind
     st.markdown("""
     <div class="text-center py-12">
-        <h1 class="text-5xl font-bold text-blue-600 mb-4">🚀 JALU - Platform MBG Terpadu</h1>
+        <h1 class="text-5xl font-bold text-blue-600 mb-4">JALU - Platform MBG Terpadu</h1>
         <p class="text-xl text-gray-600 mb-8">Membangun Generasi Emas dengan Gizi Seimbang</p>
     </div>
     """, unsafe_allow_html=True)
@@ -520,3 +520,4 @@ st.markdown("""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
