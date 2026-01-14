@@ -38,7 +38,14 @@ def get_nutrition_data():
 # --- LOAD MODELS & DATA ---
 @st.cache_resource
 def load_yolo_model():
-    return YOLO("yolov8n.pt") # Menggunakan nano agar lebih ringan
+    with st.spinner("🔄 Memuat model AI..."):
+        try:
+            model = YOLO("yolov8n.pt")  # Menggunakan nano agar lebih ringan
+            st.success("✅ Model AI berhasil dimuat!")
+            return model
+        except Exception as e:
+            st.error(f"❌ Gagal memuat model: {str(e)}")
+            return None
 
 @st.cache_data
 def load_mbg_data():
@@ -75,11 +82,13 @@ def load_mbg_data():
             })
     return pd.DataFrame(data)
 
-# Inisialisasi Data
-yolo_model = load_yolo_model()
-nutrition_data = get_nutrition_data()
-mbg_data = load_mbg_data()
-food_mapping = {k.lower(): k for k in nutrition_data["FoodType"].values}
+# Inisialisasi Data dengan progress
+with st.spinner("🚀 Memuat aplikasi JALU..."):
+    yolo_model = load_yolo_model()
+    nutrition_data = get_nutrition_data()
+    mbg_data = load_mbg_data()
+    food_mapping = {k.lower(): k for k in nutrition_data["FoodType"].values}
+    st.success("🎉 Aplikasi siap digunakan!")
 
 # =============================================================================
 # TAILWIND CSS INTEGRATION
@@ -273,135 +282,172 @@ elif page == "Dashboard Analisis":
         avg_budget = filtered["Anggaran_Terserap"].mean()
         st.metric("💰 Anggaran Terserap", f"{avg_budget:.1f}%")
 
-    # Charts Section
+    # Charts Section with lazy loading
     st.markdown("### 📊 Visualisasi Data", unsafe_allow_html=True)
 
-    # Row 1: Bar Chart and Scatter Plot
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("""
-        <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
-            <h4 class="text-lg font-semibold text-gray-800 mb-2">📊 Distribusi Siswa per Provinsi</h4>
-        </div>
-        """, unsafe_allow_html=True)
-        fig1 = px.bar(
-            filtered,
-            x="Provinsi",
-            y="Jumlah_Siswa_Penerima",
-            color="Jenjang_Pendidikan",
-            title="",
-            template="plotly_white"
-        )
-        fig1.update_layout(showlegend=True, height=400)
-        st.plotly_chart(fig1, width='stretch')
+    # Add chart selection to reduce initial load
+    chart_options = ["Semua Chart", "Chart Utama", "Chart Detail"]
+    selected_charts = st.selectbox(
+        "🎨 Pilih tampilan chart:",
+        chart_options,
+        help="Pilih untuk mengoptimalkan performa loading"
+    )
 
-    with c2:
-        st.markdown("""
-        <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
-            <h4 class="text-lg font-semibold text-gray-800 mb-2">🎯 Kepuasan vs Keberhasilan</h4>
-        </div>
-        """, unsafe_allow_html=True)
-        fig2 = px.scatter(
-            filtered,
-            x="Tingkat_Kepuasan",
-            y="Indeks_Keberhasilan",
-            size="Jumlah_Siswa_Penerima",
-            color="Provinsi",
-            title="",
-            template="plotly_white"
-        )
-        fig2.update_layout(height=400)
-        st.plotly_chart(fig2, width='stretch')
+    if selected_charts == "Semua Chart" or selected_charts == "Chart Utama":
+        # Row 1: Bar Chart and Scatter Plot
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("""
+            <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
+                <h4 class="text-lg font-semibold text-gray-800 mb-2">📊 Distribusi Siswa per Provinsi</h4>
+            </div>
+            """, unsafe_allow_html=True)
+            with st.spinner("Memuat chart distribusi..."):
+                fig1 = px.bar(
+                    filtered,
+                    x="Provinsi",
+                    y="Jumlah_Siswa_Penerima",
+                    color="Jenjang_Pendidikan",
+                    title="",
+                    template="plotly_white"
+                )
+                fig1.update_layout(showlegend=True, height=400)
+                st.plotly_chart(fig1, width='stretch')
 
-    # Row 2: Pie Chart and Box Plot
-    c3, c4 = st.columns(2)
-    with c3:
-        st.markdown("""
-        <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
-            <h4 class="text-lg font-semibold text-gray-800 mb-2">💰 Anggaran Terserap per Provinsi</h4>
-        </div>
-        """, unsafe_allow_html=True)
-        # Aggregate data by province for pie chart
-        prov_budget = filtered.groupby("Provinsi")["Anggaran_Terserap"].mean().reset_index()
-        fig3 = px.pie(
-            prov_budget,
-            values="Anggaran_Terserap",
-            names="Provinsi",
-            title="",
-            template="plotly_white",
-            color_discrete_sequence=px.colors.qualitative.Set3
-        )
-        fig3.update_layout(height=400)
-        st.plotly_chart(fig3, width='stretch')
+        with c2:
+            st.markdown("""
+            <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
+                <h4 class="text-lg font-semibold text-gray-800 mb-2">🎯 Kepuasan vs Keberhasilan</h4>
+            </div>
+            """, unsafe_allow_html=True)
+            with st.spinner("Memuat chart scatter..."):
+                fig2 = px.scatter(
+                    filtered,
+                    x="Tingkat_Kepuasan",
+                    y="Indeks_Keberhasilan",
+                    size="Jumlah_Siswa_Penerima",
+                    color="Provinsi",
+                    title="",
+                    template="plotly_white"
+                )
+                fig2.update_layout(height=400)
+                st.plotly_chart(fig2, width='stretch')
 
-    with c4:
-        st.markdown("""
-        <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
-            <h4 class="text-lg font-semibold text-gray-800 mb-2">📈 Distribusi Tingkat Kepuasan</h4>
-        </div>
-        """, unsafe_allow_html=True)
-        fig4 = px.box(
-            filtered,
-            x="Jenjang_Pendidikan",
-            y="Tingkat_Kepuasan",
-            color="Jenjang_Pendidikan",
-            title="",
-            template="plotly_white"
-        )
-        fig4.update_layout(height=400, showlegend=False)
-        st.plotly_chart(fig4, width='stretch')
+    if selected_charts == "Semua Chart" or selected_charts == "Chart Detail":
+        # Row 2: Pie Chart and Box Plot
+        c3, c4 = st.columns(2)
+        with c3:
+            st.markdown("""
+            <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
+                <h4 class="text-lg font-semibold text-gray-800 mb-2">💰 Anggaran Terserap per Provinsi</h4>
+            </div>
+            """, unsafe_allow_html=True)
+            with st.spinner("Memuat chart pie..."):
+                # Aggregate data by province for pie chart
+                prov_budget = filtered.groupby("Provinsi")["Anggaran_Terserap"].mean().reset_index()
+                fig3 = px.pie(
+                    prov_budget,
+                    values="Anggaran_Terserap",
+                    names="Provinsi",
+                    title="",
+                    template="plotly_white",
+                    color_discrete_sequence=px.colors.qualitative.Set3
+                )
+                fig3.update_layout(height=400)
+                st.plotly_chart(fig3, width='stretch')
 
-    # Row 3: Line Chart and Heatmap
-    c5, c6 = st.columns(2)
-    with c5:
-        st.markdown("""
-        <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
-            <h4 class="text-lg font-semibold text-gray-800 mb-2">📉 Tren Indeks Keberhasilan</h4>
-        </div>
-        """, unsafe_allow_html=True)
-        fig5 = px.line(
-            filtered.sort_values("Indeks_Keberhasilan"),
-            x="Provinsi",
-            y="Indeks_Keberhasilan",
-            color="Jenjang_Pendidikan",
-            markers=True,
-            title="",
-            template="plotly_white"
-        )
-        fig5.update_layout(height=400)
-        st.plotly_chart(fig5, use_container_width=True)
+        with c4:
+            st.markdown("""
+            <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
+                <h4 class="text-lg font-semibold text-gray-800 mb-2">📈 Distribusi Tingkat Kepuasan</h4>
+            </div>
+            """, unsafe_allow_html=True)
+            with st.spinner("Memuat chart box..."):
+                fig4 = px.box(
+                    filtered,
+                    x="Jenjang_Pendidikan",
+                    y="Tingkat_Kepuasan",
+                    color="Jenjang_Pendidikan",
+                    title="",
+                    template="plotly_white"
+                )
+                fig4.update_layout(height=400, showlegend=False)
+                st.plotly_chart(fig4, width='stretch')
 
-    with c6:
-        st.markdown("""
-        <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
-            <h4 class="text-lg font-semibold text-gray-800 mb-2">🔥 Korelasi Metrik Program</h4>
-        </div>
-        """, unsafe_allow_html=True)
-        # Create correlation matrix for key metrics
-        corr_data = filtered[["Tingkat_Kepuasan", "Penurunan_Stunting", "Indeks_Keberhasilan", "Anggaran_Terserap"]]
-        corr_matrix = corr_data.corr()
-        fig6 = px.imshow(
-            corr_matrix,
-            text_auto=True,
-            aspect="auto",
-            title="",
-            template="plotly_white",
-            color_continuous_scale="RdBu_r"
-        )
-        fig6.update_layout(height=400)
-        st.plotly_chart(fig6, width='stretch')
+        # Row 3: Line Chart and Heatmap
+        c5, c6 = st.columns(2)
+        with c5:
+            st.markdown("""
+            <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
+                <h4 class="text-lg font-semibold text-gray-800 mb-2">📉 Tren Indeks Keberhasilan</h4>
+            </div>
+            """, unsafe_allow_html=True)
+            with st.spinner("Memuat chart line..."):
+                fig5 = px.line(
+                    filtered.sort_values("Indeks_Keberhasilan"),
+                    x="Provinsi",
+                    y="Indeks_Keberhasilan",
+                    color="Jenjang_Pendidikan",
+                    markers=True,
+                    title="",
+                    template="plotly_white"
+                )
+                fig5.update_layout(height=400)
+                st.plotly_chart(fig5, use_container_width=True)
 
-    # Data Table
+        with c6:
+            st.markdown("""
+            <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
+                <h4 class="text-lg font-semibold text-gray-800 mb-2">🔥 Korelasi Metrik Program</h4>
+            </div>
+            """, unsafe_allow_html=True)
+            with st.spinner("Memuat heatmap korelasi..."):
+                # Create correlation matrix for key metrics
+                corr_data = filtered[["Tingkat_Kepuasan", "Penurunan_Stunting", "Indeks_Keberhasilan", "Anggaran_Terserap"]]
+                corr_matrix = corr_data.corr()
+                fig6 = px.imshow(
+                    corr_matrix,
+                    text_auto=True,
+                    aspect="auto",
+                    title="",
+                    template="plotly_white",
+                    color_continuous_scale="RdBu_r"
+                )
+                fig6.update_layout(height=400)
+                st.plotly_chart(fig6, width='stretch')
+
+    # Data Table with pagination for better performance
     st.markdown("### 📋 Detail Data", unsafe_allow_html=True)
     st.markdown("""
     <div class="bg-white p-4 rounded-xl shadow-lg">
         <p class="text-gray-600 mb-4">Data lengkap program MBG berdasarkan filter yang dipilih</p>
     </div>
     """, unsafe_allow_html=True)
+
+    # Add pagination controls
+    rows_per_page = st.selectbox(
+        "📄 Baris per halaman:",
+        options=[10, 25, 50, 100],
+        index=1,  # Default 25
+        help="Pilih jumlah baris untuk performa optimal"
+    )
+
+    total_rows = len(filtered)
+    total_pages = (total_rows // rows_per_page) + (1 if total_rows % rows_per_page > 0 else 0)
+
+    if total_pages > 1:
+        page = st.slider("Halaman:", 1, total_pages, 1)
+        start_idx = (page - 1) * rows_per_page
+        end_idx = start_idx + rows_per_page
+        display_data = filtered.iloc[start_idx:end_idx]
+        st.caption(f"Menampilkan {start_idx + 1}-{min(end_idx, total_rows)} dari {total_rows} baris")
+    else:
+        display_data = filtered
+
     st.dataframe(
-        filtered.style.highlight_max(axis=0),
+        display_data.style.highlight_max(axis=0),
         width='stretch',
-        height=400
+        height=min(400, len(display_data) * 35 + 50)  # Dynamic height based on rows
     )
 
 # =============================================================================
@@ -451,7 +497,7 @@ elif page == "Deteksi AI Vision":
                 <h4 class="text-lg font-semibold text-gray-800 mb-2">🖼️ Gambar Hasil Deteksi</h4>
             </div>
             """, unsafe_allow_html=True)
-            st.image(processed_img, caption="Hasil Deteksi AI", use_container_width=True)
+            st.image(processed_img, caption="Hasil Deteksi AI")
 
         with col_res:
             # Detection Summary
