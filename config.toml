@@ -1,0 +1,15 @@
+[theme]
+base = "light"
+primaryColor = "#228B22"  # Green for nutrition
+backgroundColor = "linear-gradient(135deg, #FFFFFF 0%, #F0FFF0 100%)"
+secondaryBackgroundColor = "linear-gradient(135deg, #F0FFF0 0%, #E6FFE6 100%)"
+textColor = "#000000"
+font = "Inter, sans-serif"
+
+[theme.dark]
+base = "dark"
+primaryColor = "#012c01"  # Lime green for nutrition
+backgroundColor = "linear-gradient(135deg, #1E1E1E 0%, #2E2E2E 100%)"
+secondaryBackgroundColor = "linear-gradient(135deg, #2E2E2E 0%, #3E3E3E 100%)"
+textColor = "#FFFFFF"
+font = "Inter, sans-serif"
