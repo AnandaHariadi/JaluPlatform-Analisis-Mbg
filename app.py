@@ -293,7 +293,7 @@ elif page == "Dashboard Analisis":
             template="plotly_white"
         )
         fig1.update_layout(showlegend=True, height=400)
-        st.plotly_chart(fig1, use_container_width=True)
+        st.plotly_chart(fig1, width='stretch')
 
     with c2:
         st.markdown("""
@@ -311,7 +311,7 @@ elif page == "Dashboard Analisis":
             template="plotly_white"
         )
         fig2.update_layout(height=400)
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, width='stretch')
 
     # Row 2: Pie Chart and Box Plot
     c3, c4 = st.columns(2)
@@ -332,7 +332,7 @@ elif page == "Dashboard Analisis":
             color_discrete_sequence=px.colors.qualitative.Set3
         )
         fig3.update_layout(height=400)
-        st.plotly_chart(fig3, use_container_width=True)
+        st.plotly_chart(fig3, width='stretch')
 
     with c4:
         st.markdown("""
@@ -349,7 +349,7 @@ elif page == "Dashboard Analisis":
             template="plotly_white"
         )
         fig4.update_layout(height=400, showlegend=False)
-        st.plotly_chart(fig4, use_container_width=True)
+        st.plotly_chart(fig4, width='stretch')
 
     # Row 3: Line Chart and Heatmap
     c5, c6 = st.columns(2)
@@ -389,7 +389,7 @@ elif page == "Dashboard Analisis":
             color_continuous_scale="RdBu_r"
         )
         fig6.update_layout(height=400)
-        st.plotly_chart(fig6, use_container_width=True)
+        st.plotly_chart(fig6, width='stretch')
 
     # Data Table
     st.markdown("### 📋 Detail Data", unsafe_allow_html=True)
@@ -400,7 +400,7 @@ elif page == "Dashboard Analisis":
     """, unsafe_allow_html=True)
     st.dataframe(
         filtered.style.highlight_max(axis=0),
-        use_container_width=True,
+        width='stretch',
         height=400
     )
 
